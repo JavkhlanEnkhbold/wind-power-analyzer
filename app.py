@@ -1,17 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from bokeh.plotting import figure
+from windrose import WindroseAxes
+from matplotlib import pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+from datetime import datetime
+import time
+
+#st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
 
 st.title('Windscore')
 st.subheader("**A tool for analyzing wind energy**")
-st.subheader("Created by Javkhlan Enkhbold")
-
-# Create a text element and let the reader know the data is loading.
-data_load_state = st.text('Loading data...')
-
-data_path = "rawdata/wind_berlin.csv"
-
 
 @st.cache
 def load_data(file):
@@ -19,19 +19,31 @@ def load_data(file):
     data["Datum&Uhrzeit"] = pd.to_datetime(data["Datum&Uhrzeit"])
     return data
 
-
-
-# Load 10,000 rows of data into the dataframe.
-data = load_data(file=data_path)
-
-st.write(type(data["Datum&Uhrzeit"]))
-
-# Notify the reader that the data was successfully loaded.
-data_load_state.text("Data is done!")
+with st.sidebar:
+    uploaded_file = st.file_uploader("Choose a file")
+    if uploaded_file is not None:
+        # Can be used wherever a "file-like" object is accepted:
+        dataframe = load_data(uploaded_file)
+        st.write("Sucess.")
 
 
 st.subheader('Raw data')
-st.write(data)
+show_raw_data = st.checkbox('Show Raw Data')
+if show_raw_data:
+     st.dataframe(data = dataframe)
+
+st.subheader("Statistik")
+show_statistic = st.checkbox("Show Statistic")
+if show_statistic:
+    st.write(dataframe.describe())
+st.subheader("Plotts")
+show_plot = st.checkbox("Show Plotts")
+if show_plot:
+    
+    st.bar_chart(dataframe)
 
 
-st.line_chart(data)
+
+
+
+
