@@ -5,6 +5,7 @@ import matplotlib.cm as cm
 import numpy as np
 from datetime import datetime, timezone, date
 from scipy import stats
+from PIL import Image
 
 
 #st.metric(label="Temperature", value="70 °F", delta="1.2 °F")
@@ -16,9 +17,15 @@ st.write("The core functions of this app should be : 1. Upload raw windspeed dat
 
 #@st.cache
 def load_data(file):
-    data = pd.read_csv(file, sep=";")
-    data["Datum&Uhrzeit"] = pd.to_datetime(data["Datum&Uhrzeit"])
-    return data
+    df = pd.read_csv(file,sep=",")
+    df["Datetime"] = pd.to_datetime(dict(year = df.YEAR,
+                                         month = df.MO,
+                                         day = df.DY,
+                                         hour = df.HR))
+    df.set_index("Datetime", inplace = True)
+    df = df[["MO","WD50M","WS50M"]]
+    df.columns = ["Month","Direction","Speed"]
+    return df
 
 #@st.cache
 def plot_FFT(df):
@@ -31,13 +38,10 @@ def plot_FFT(df):
 
 with st.sidebar:
     st.subheader("Upload raw data")
-
     uploaded_file = st.file_uploader("Choose a file")
     if uploaded_file is not None:
-        # Can be used wherever a "file-like" object is accepted:
         dataframe = load_data(uploaded_file)
-        dataframe = dataframe.set_index(pd.to_datetime(dataframe["Datum&Uhrzeit"])).reset_index(drop=True)
-        dataframe["Time"] = pd.to_datetime(dataframe["Datum&Uhrzeit"])
+        st.write(dataframe)
     
     st.subheader('Raw data')
     show_raw_data = st.checkbox('Show Raw Data')
@@ -65,21 +69,18 @@ if show_statistic:
 if show_plot:
     st.header("Plotts")
 
-    #Plott2
+    #Plott1
     st.subheader("Time-Series")
-    fig, ax = plt.subplots() 
-    df = pd.DataFrame([dataframe["Time"], dataframe.iloc[:,1]])
-    st.write(df)
-    #dataframe.iloc[:,1].plot(y=dataframe["Time"].dt.year)
+    fig, ax = plt.subplots()
+    dataframe["Speed"].plot(label="Speed [m/s]")
+    daily = dataframe["Speed"].resample('D').mean()
+    daily.plot(color="#BB0000", label="Daily Mean")
     ax.legend()
     ax.grid(color="black")
     st.pyplot(fig)
-    dataframe['date'] = pd.to_datetime(dataframe['Datum&Uhrzeit'])
-    df = dataframe.set_index('date') 
-    daily = df["Windgeschwindigkeit [m/s]"].resample('D').mean()
-    st.write()
+  
 
-    #Plott3
+    #Plott2
     st.subheader("Fast-Fourier Transformation")
     fig, ax = plt.subplots()
     ax = abs(pd.Series(np.fft.rfft(daily - daily.mean())))
@@ -87,11 +88,12 @@ if show_plot:
     ax.plot(grid=True)
     st.pyplot(fig)
     
-    #Plott4
+    #Plott3
     st.subheader("Wind speed distribution")
+    image = Image.open('/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/Weibull-Distribution.png')
+    st.image(image, caption='Weibull-Distribution')
     fig, ax = plt.subplots()
     dist = stats.weibull_min.fit(daily, floc=0, scale=2)
-    st.write(dist[0])
     speed_range = np.arange(0, daily.max())
     ax.plot(stats.weibull_min.pdf(speed_range, *(dist)),
          color = "blue",
