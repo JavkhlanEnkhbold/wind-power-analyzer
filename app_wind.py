@@ -19,7 +19,6 @@ st.write("The core functions of this app should be : 1. Upload raw windspeed dat
 
 #@st.cache
 def load_data(file):
-    place = "Wageningen, Netherlands"
     dataframe = pd.read_csv(file,sep=",")
     dataframe["Datetime"] = pd.to_datetime(dict(year = dataframe.YEAR,
                                          month = dataframe.MO,
@@ -29,6 +28,10 @@ def load_data(file):
     dataframe = dataframe[["MO","WD50M","WS50M"]]
     dataframe.columns = ["Month","Direction","Speed"]
     return dataframe
+
+def read_units(file):
+    df = pd.read_csv(file, sep=",")
+    return df
 
 #@st.cache
 def plot_FFT(dataframe):
@@ -55,9 +58,9 @@ with st.sidebar:
     show_plot = st.checkbox("Show Plotts")  
     
     st.subheader("Anlagenparameter")
-    option = st.selectbox('Windkraftanlagen', ('Enercon E30', 'Siemens', 'Nordex'))
-
-    st.write('You selected:', option)
+    df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
+    type = st.selectbox('Modell', (name for name in df["name"]))
+    
     st.subheader("Wirtschaftlichkeit")
     
 if show_raw_data:
@@ -193,5 +196,22 @@ if show_plot:
     ax.set_legend(loc = "best")
     plt.title(f"Wind rose diagram for Berlin")
     st.pyplot(plt)
-
-   
+    
+    st.subheader("Wind Turbine")
+    st.write("The power curve of a wind turbine is a graph that depicts how much electrical power output is produced by a wind turbine at different wind speeds. These curves are found by field measurements, where the wind speed reading from a device called an anemometer (which is placed on a mast at a reasonable distance to the wind turbine) is read and plotted against the electrical power output from the turbine.")
+    
+if type:
+    st.subheader("Analagentype:" )
+    df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
+    df['power_curve_wind_speeds'] = df['power_curve_wind_speeds'].str.strip('[]')
+    df['power_curve_values'] = df['power_curve_values'].str.strip('[]')
+    selected_unit = df.loc[df["name"] == type]
+    lst = selected_unit['power_curve_wind_speeds'].to_list()[0]
+    for i in lst:
+        i = i.replace(", ", "").replace(".", "").strip()
+        i = (float(i)) 
+        st.write(i)
+    st.write(lst)
+    
+    
+    
