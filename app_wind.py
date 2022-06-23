@@ -9,6 +9,7 @@ from PIL import Image
 from yaml import load
 from windrose import WindroseAxes
 from mpl_toolkits.axes_grid.inset_locator import inset_axes
+import math
 
 
 
@@ -32,15 +33,6 @@ def load_data(file):
 def read_units(file):
     df = pd.read_csv(file, sep=",")
     return df
-
-#@st.cache
-def plot_FFT(dataframe):
-    fft = abs(pd.Series(np.fft.rfft(dataframe - dataframe.mean()),
-    index = np.fft.rfftfreq(len(dataframe), d = 1./8760))**2)
-    fft.plot()
-    plt.xlim(0, 768)
-    plt.xlabel("1/a")
-    plt.grid(True)
 
 with st.sidebar:
     st.subheader("Upload raw data")
@@ -147,15 +139,6 @@ if show_plot:
     fig.suptitle(f"Monthly wind speed in 2020 for Berlin")
     st.pyplot(fig)
     
-  
-
-    #Plott2
-    st.subheader("Fast-Fourier Transformation")
-    fig, ax = plt.subplots()
-    ax = abs(pd.Series(np.fft.rfft(daily - daily.mean())))
-    index = np.fft.rfftfreq(len(daily), d = 1./8760)**2
-    ax.plot(grid=True)
-    st.pyplot(fig)
     
     #Plott3
     st.subheader("Wind speed distribution")
@@ -174,6 +157,9 @@ if show_plot:
     ax.legend()
     st.pyplot(fig)
     
+    #Plott4
+
+
     
     st.subheader("Windrose")
     plt.figure(figsize = (8, 6))
@@ -201,17 +187,63 @@ if show_plot:
     st.write("The power curve of a wind turbine is a graph that depicts how much electrical power output is produced by a wind turbine at different wind speeds. These curves are found by field measurements, where the wind speed reading from a device called an anemometer (which is placed on a mast at a reasonable distance to the wind turbine) is read and plotted against the electrical power output from the turbine.")
     
 if type:
-    st.subheader("Analagentype:" )
+    st.subheader("Anlagentype:" )
     df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
-    df['power_curve_wind_speeds'] = df['power_curve_wind_speeds'].str.strip('[]')
-    df['power_curve_values'] = df['power_curve_values'].str.strip('[]')
+    df['power_curve_wind_speeds'] = df['power_curve_wind_speeds']
+    df['power_curve_values'] = df['power_curve_values']
+    st.write(df)
     selected_unit = df.loc[df["name"] == type]
-    lst = selected_unit['power_curve_wind_speeds'].to_list()[0]
-    for i in lst:
-        i = i.replace(", ", "").replace(".", "").strip()
-        i = (float(i)) 
-        st.write(i)
-    st.write(lst)
     
+    lst_wind_speed = selected_unit['power_curve_wind_speeds'].to_list()[0]
+    lst_wind_speed = [float(x.strip(' []')) for x in lst_wind_speed.split(',')]
     
+    lst_curve_values = selected_unit['power_curve_values'].to_list()[0]
+    lst_curve_values = [float(x.strip(' []')) for x in lst_curve_values.split(',')]
+    
+    lst_merged = [lst_wind_speed, lst_curve_values]
+    power_curve = pd.DataFrame(lst_merged).transpose().set_axis(['wind_speed_class', 'Power at given speed'], axis=1, inplace=False)
+    power_curve.set_index("wind_speed_class", inplace = True)
+    
+    cut_in_speed = 3 
+    cut_out_speed = 25
+    rated_speed = 14
+    rated_power = 810
+    
+    st.write(power_curve)
+    
+    st.subheader("Power Curve")
+    fig, ax = plt.subplots()
+
+    ax = power_curve["Power at given speed"].plot(color = "darkblue", linewidth = 4, label = "Power Curve")
+
+    ax.vlines(x = cut_in_speed,
+            ymin = 0,
+            ymax = power_curve.loc[cut_in_speed, "Power at given speed"],
+            linestyle = "dashed",
+            color = "black"
+            )
+
+    ax.vlines(x = cut_out_speed,
+            ymin = 0,
+            ymax = power_curve.loc[cut_out_speed, "Power at given speed"],
+            color = "darkblue",
+            linewidth = 4
+            )
+
+    ax.hlines(y = 0,
+            xmin = cut_out_speed,
+            xmax = 30,
+            color = "darkblue",
+            linewidth = 4
+            )
+
+    plt.xlabel("Speed (m/s)")
+    plt.ylabel("Power at given speed (kW)")
+    plt.title("Power curve diagram of given wind turbine")
+
+    #plt.xlim(0, 30)
+    #plt.ylim(0, 1000)
+    plt.legend(loc = "upper left")
+    st.pyplot(plt)
+
     
