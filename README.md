@@ -1,7 +1,9 @@
 # wind-power-analyzer
 This app is a simple streamlit app to analyze windenergy.
 
-It takes a .csv file and does data cleaning, mining, and visualization.
+It takes a .csv file as an input and computes data cleaning, mining, and visualization.
+The input of the data used here is https://power.larc.nasa.gov/data-access-viewer/.
+and database used for the wind energy unit is https://openenergy-platform.org/dataedit/view/supply/wind_turbine_library.
 
 In order to use this:
 
