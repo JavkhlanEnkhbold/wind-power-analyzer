@@ -10,7 +10,7 @@ In order to use this:
 run: streamlit run app.py
 
 ## Results
-After importing any time series of wind direction and speed data, it creates these plotts.
+After importing time series of wind direction and speed data, it creates these plotts.
 
 ![1f626d59fea80fb0f64f2049fa4c0d9395b52110730a8e114d3c47fc](https://user-images.githubusercontent.com/43927902/175044523-d187a87f-ce6f-4e3d-ace9-065863664cbb.png)
 ![5f18155dd1afaa7566716a194f35e2136edf4281d17649801549b3e2](https://user-images.githubusercontent.com/43927902/175044537-811b27c3-af91-4fe9-84e3-7293933b709d.png)
