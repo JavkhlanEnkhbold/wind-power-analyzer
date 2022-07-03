@@ -18,5 +18,6 @@ After importing time series of wind direction and speed data, it creates these p
 ![62effa58cc3a433da19a1fa7331a7481c4cbe849e355c087d642059c](https://user-images.githubusercontent.com/43927902/175044554-f59072b7-f89d-4640-8cf8-f6bb432b77c5.png)
 ![231a6f35408da65773cc85ffff42f21935d515d36881596ad87b9731](https://user-images.githubusercontent.com/43927902/175044561-70e5659a-3dcf-4b15-b564-0b7927297423.png)
 ![ae33d1afcbaad2a58870d97462a6458fef803ab5276fb44217d161fd](https://user-images.githubusercontent.com/43927902/175044563-05d8a3e9-2565-435a-bc80-b20f0d0ad67f.png)
-![d5f60f2f05455421afb0f![8d206e66ccf0800db025572368a100f37f588e1d341f1a7dc7533d61](https://user-images.githubusercontent.com/43927902/177038550-5afcd80a-93b1-4fb1-b79e-7e7d9e79d60a.png)
-77cee1949b355f5be7e8ff852275853b861](https://user-images.githubusercontent.com/43927902/175044565-4b6bf773-e84e-44e3-aace-4f618d0c39da.png)
+![d5f60f2f05455421afb0f![8d206e66ccf0800db025572368a100f37f588e1d341f1a7dc7533d61](https://user-images.githubusercontent.com/43927902/177038550-5afcd80a-93b1-4fb1-b79e-7e7d9e79d60![8d206e66ccf0800db025572368a100f37f588e1d341f1a7dc7533d61](https://user-images.githubusercontent.com/43927902/177038773-667f713b-7d04-4106-ada3-b82e87900b06.png)
+a.png)
+
