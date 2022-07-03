@@ -7,6 +7,8 @@ and database used for the wind energy unit is https://openenergy-platform.org/da
 
 In order to use this:
 
+git pull this Repo
+
 run: streamlit run app.py
 
 ## Results
