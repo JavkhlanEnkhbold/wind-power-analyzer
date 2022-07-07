@@ -1,3 +1,4 @@
+from tkinter.ttk import Style
 import streamlit as st
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -55,6 +56,7 @@ with st.sidebar:
     type = st.selectbox('Modell', (name for name in df["name"]))
     
     st.subheader("Wirtschaftlichkeit")
+    show_analysis = st.checkbox("Show analysis")
     
 if show_raw_data:
     st.subheader("Raw Data")
@@ -170,7 +172,7 @@ if show_plot:
     
     #Plott4: Anlage
     if type:
-        st.subheader("Selected unit/modell: {}".format(str(type)) )
+        #st.subheader("Selected unit/modell: {}".format(str(type)) )
         df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
         df['power_curve_wind_speeds'] = df['power_curve_wind_speeds']
         df['power_curve_values'] = df['power_curve_values']
@@ -186,38 +188,11 @@ if show_plot:
         power_curve = pd.DataFrame(lst_merged).transpose().set_axis(['wind_speed_class', 'Power at given speed'], axis=1, inplace=False)
         power_curve.set_index("wind_speed_class", inplace = True)
         
-        st.write(power_curve)
+        
         cut_in_speed = 3 
         cut_out_speed = 25
         rated_speed = 14
         rated_power = 810
-        
-        st.subheader("Power Curve")
-        fig, ax = plt.subplots()
-        ax = power_curve["Power at given speed"].plot(color = "darkblue", linewidth = 4, label = "Power Curve")
-        ax.vlines(x = cut_in_speed,
-                ymin = 0,
-                ymax = power_curve.loc[cut_in_speed, "Power at given speed"],
-                linestyle = "dashed",
-                color = "black"
-                )
-        ax.vlines(x = cut_out_speed,
-                ymin = 0,
-                ymax = power_curve.loc[cut_out_speed, "Power at given speed"],
-                color = "darkblue",
-                linewidth = 4
-                )
-        ax.hlines(y = 0,
-                xmin = cut_out_speed,
-                xmax = 30,
-                color = "darkblue",
-                linewidth = 4
-                )
-        plt.xlabel("Speed (m/s)")
-        plt.ylabel("Power at given speed (kW)")
-        plt.title("Power curve diagram of given wind turbine")
-        plt.legend(loc = "upper left")
-        st.pyplot(plt)
     
     # Definition of Dataframe
     df = dataframe
@@ -231,8 +206,8 @@ if show_plot:
     for index in df.index:
         df.loc[index, "Speed Class"] = math.ceil(df.loc[index, "Speed"])
     
-    st.subheader("Wind Class in details")
-    st.write(df)
+    #st.subheader("Wind Class in details")
+    #st.write(df)
     
     st.subheader("Frequency in Details")
     df_new = df.groupby(["Speed Class"]).count()
@@ -240,7 +215,7 @@ if show_plot:
     df_new.columns = ["Observed Frequency"]
     df_new["Cumulative Frequency"] = df_new["Observed Frequency"].cumsum()
     df_new.sort_index(inplace = True)    
-    st.write(df_new)
+   
     
     #Plott5: Weibull Verteilung
     fig, ax = plt.subplots()
@@ -291,6 +266,33 @@ if show_plot:
     #Plott6: Power Curve
     #Enercon E-82/3000    
     st.subheader("Power Curve")
+       
+    fig, ax = plt.subplots()
+    ax = power_curve["Power at given speed"].plot(color = "darkblue", linewidth = 4, label = "Power Curve")
+    ax.vlines(x = cut_in_speed,
+                ymin = 0,
+                ymax = power_curve.loc[cut_in_speed, "Power at given speed"],
+                linestyle = "dashed",
+                color = "black"
+                )
+    ax.vlines(x = cut_out_speed,
+                ymin = 0,
+                ymax = power_curve.loc[cut_out_speed, "Power at given speed"],
+                color = "darkblue",
+                linewidth = 4
+                )
+    ax.hlines(y = 0,
+                xmin = cut_out_speed,
+                xmax = 30,
+                color = "darkblue",
+                linewidth = 4
+                )
+    plt.xlabel("Speed (m/s)")
+    plt.ylabel("Power at given speed (kW)")
+    plt.title("Power curve diagram of given wind turbine")
+    plt.legend(loc = "upper left")
+    st.pyplot(plt)
+        
     cut_in_speed = 3 
     cut_out_speed = 25
     rated_speed = 17
@@ -304,6 +306,7 @@ if show_plot:
     power_curve["Power production distribution"] = power_curve["Frequency (%)"] * power_curve["Power at given speed"]/100
     power_curve["Energy yield"] = power_curve["Power at given speed"] * power_curve["Hours"]
     st.write(power_curve)
+    #st.write(df_new)
     
     rated_power = 3020
     capacity_factor = power_curve["Energy yield"].sum() / (power_curve["Hours"].sum() * rated_power)
@@ -349,3 +352,53 @@ if show_plot:
             bbox_to_anchor = (0.87, 0.05))
 
     st.pyplot(fig)
+
+if show_analysis:
+    st.subheader("Economic Analysis")
+    # i: Zinssatz bzw WACC, 
+    # G: Kapazität (Nennleistung der Anlage) in kW, 
+    # Q: Energieerzeugung pro Jahr in kWh (das muss aus der Standortanalyse kommen), 
+    # C: Investitionskosten (Kapitalkosten) pro kW Kapazität, 
+    # O_var= variable Betriebskosten in Euro/kWh, 
+    # O_fix= konstante Betriebskosten in Euro/kW  
+    # 'global' parameters habe ich für jupyter benutzt um jeden Parameter nachher beliebig abzurufen. 
+    # Du kannst diese einfach weglassen mit Streamlit
+    def lcoe(i, G, Q, C, O_var, O_fix, T):
+        #aus Zinssatz und Lebensdauer den PVF "Present Value Factor" berechnen. Das Annuitätsfaktor "a" ist dann 1/PVF.
+        pvf=(1/i)*(1-1/(1+i)**T)
+        a=1/pvf
+        #Investitionskosten für die Anlage in Euro (für das erste Jahr)
+        I_0= G*C
+        # Konstante Betriebskosten für die Anlage in Euro/a 
+        B=G*O_fix
+        # LCOE berechnen: 1) I_0 mit a multiplizieren um die Kapitalkosten auf die gesamte Lebensdauer von der Turbine zu verteilen und dabei Zeitwert des Geldes zu berücksichtigen. Daraus ergibt sich Investitionskosten pro jahr (Euro/a)
+        #                 2) Summiere jährliche Investitionskosten mit jährlichen festen Betriebskosten (B) und Teile diese Summe dann die jährliche Erzeugung (kWh/a). Daraus bekommst du Euro/kWh  
+        #                 3) Darauf kommen die varable Kosten (Marginal Costs inklusive den Brennstoffkosten, hier 0, und andere variable Kosten)
+        p=(I_0*a+B)/Q+O_var
+        
+        return(I_0, B, pvf, a, p)
+    #Abweichung für die Parameter 'C' Kapitalkosten 
+    abw=np.arange(0, 2, 0.05, dtype=float)
+    i = st.number_input('Zinssatz')
+    G = st.slider('Kapazität', 1, 100, 3)
+    Q = st.slider('Energieerzeugung pro Jahr in kWh', 1, 100, 50)
+    C = 1700 * abw
+    O_var = st.slider("variable Betriebskosten in €/kWh", 1, 100, 35)
+    O_fix = st.slider("konstante Betriebskosten in €/kWh", 1, 100, 25)
+    T = st.slider("Zeitraum", 1, 30, 10)
+    #i=0.07
+    #G=1
+    #Q=1000
+    #C=1700*abw
+    #O_fix=20
+    #O_var=0.008
+    #T=20
+    lcoe  = lcoe(i, G, Q, C, O_var, O_fix, T)
+    column_names=['Abweichung']
+    sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
+    sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
+    fig = plt.figure()
+    sensitivity.plot(x='Abweichung' , grid=True, style= "bo-", y='LCOE [Euro/kWh]')
+    st.pyplot(plt)
+    st.write(sensitivity)
+    
