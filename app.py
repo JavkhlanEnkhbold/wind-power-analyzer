@@ -12,6 +12,10 @@ from windrose import WindroseAxes
 from mpl_toolkits.axes_grid.inset_locator import inset_axes
 import math
 import seaborn as sns
+from PIL import Image
+
+
+
 
 
 
@@ -211,6 +215,8 @@ if show_plot:
     
     st.subheader("Frequency in Details")
     df_new = df.groupby(["Speed Class"]).count()
+    
+    
     df_new = df_new[["Speed"]]
     df_new.columns = ["Observed Frequency"]
     df_new["Cumulative Frequency"] = df_new["Observed Frequency"].cumsum()
@@ -296,22 +302,24 @@ if show_plot:
     cut_in_speed = 3 
     cut_out_speed = 25
     rated_speed = 17
-    rated_power = 3020
+    rated_power = 3000
     
     new_row = {"Observed Frequency": [0, 0, 0, 0]}
     df_new = df_new.append(pd.DataFrame(new_row), ignore_index=True)
+    
+    """Berechnung der Frequenz der Windklassen"""
+    
     
     power_curve["Hours"] = df_new.index.map(df_new["Observed Frequency"])
     power_curve["Frequency (%)"] = power_curve["Hours"]/power_curve["Hours"].sum()
     power_curve["Power production distribution"] = power_curve["Frequency (%)"] * power_curve["Power at given speed"]/100
     power_curve["Energy yield"] = power_curve["Power at given speed"] * power_curve["Hours"]
     st.write(power_curve)
-    #st.write(df_new)
+   
     
-    rated_power = 3020
-    capacity_factor = power_curve["Energy yield"].sum() / (power_curve["Hours"].sum() * rated_power)
+    rated_power = 3000
+    capacity_factor = power_curve["Energy yield"].sum() / (8760 * rated_power)
     capacity_factor = round(capacity_factor, 2)
-    st.write(f"The capacity factor of the given wind turbine at Berlin in 2020 was ", capacity_factor*100, "%.")
 
     fig, ax = plt.subplots()
     ax.plot(stats.weibull_min.pdf(speed_range, *params),
@@ -324,35 +332,38 @@ if show_plot:
                                                     label = "Power production distribution (%)")
 
     ax.set_ylabel("Frequency (%)", color = "blue")
-
     ax2 = ax.twinx()
-
     ax2 = power_curve["Power at given speed"].plot(color = "red", linewidth = 2, label = "Power Curve")
-
-
     ax2.vlines(x = cut_out_speed,
             ymin = 0,
             ymax = power_curve.loc[cut_out_speed, "Power at given speed"],
             color = "red",
             linewidth = 2
             )
-
     ax2.hlines(y = 0,
             xmin = cut_out_speed,
             xmax = 30,
             color = "red",
             linewidth = 2
             )
-
     ax2.set_ylabel("Power (kW)")
-
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     fig.legend(lines, labels, ncol = 2, 
             bbox_to_anchor = (0.87, 0.05))
-
     st.pyplot(fig)
+    
+    st.subheader("Summary")
+    sum_of_energy_yield = power_curve["Energy yield"].sum()
+    
+    st.write(f"The sum of the energy yield in 2021 was ", sum_of_energy_yield, "kWh" )
+    st.write(f"The rated power of the unit was", rated_power, "kW")
+    st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
+    st.write(f"The full load hour is ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
 
+    
+
+# Wirtschaftlichkeit
 if show_analysis:
     st.subheader("Economic Analysis")
     # i: Zinssatz bzw WACC, 
@@ -379,9 +390,9 @@ if show_analysis:
         return(I_0, B, pvf, a, p)
     #Abweichung für die Parameter 'C' Kapitalkosten 
     abw=np.arange(0, 2, 0.05, dtype=float)
-    i = st.number_input('Zinssatz')
-    G = st.slider('Kapazität', 1, 100, 3)
-    Q = st.slider('Energieerzeugung pro Jahr in kWh', 1, 100, 50)
+    i = 0.042
+    G = rated_power
+    Q = sum_of_energy_yield
     C = 1700 * abw
     O_var = st.slider("variable Betriebskosten in €/kWh", 1, 100, 35)
     O_fix = st.slider("konstante Betriebskosten in €/kWh", 1, 100, 25)
@@ -398,7 +409,8 @@ if show_analysis:
     sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
     sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
     fig = plt.figure()
-    sensitivity.plot(x='Abweichung' , grid=True, style= "bo-", y='LCOE [Euro/kWh]')
+    ax = sensitivity.plot(x='Abweichung' , grid=True, style= "bo-", legend=False)
+    ax.set_ylabel("LCOE [Euro/kWh]")
     st.pyplot(plt)
     st.write(sensitivity)
     
