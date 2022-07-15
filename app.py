@@ -302,7 +302,7 @@ if show_plot:
     new_row = {"Observed Frequency": [0, 0, 0, 0]}
     df_new = df_new.append(pd.DataFrame(new_row), ignore_index=True)
     
-    """Berechnung der Frequenz der Windklassen"""
+    """Calculation of the Frequency of Wind Classes"""
     
     
     power_curve["Hours"] = df_new.index.map(df_new["Observed Frequency"])
@@ -370,6 +370,7 @@ if show_analysis:
     # 'global' parameters habe ich für jupyter benutzt um jeden Parameter nachher beliebig abzurufen. 
     # Du kannst diese einfach weglassen mit Streamlit
     def lcoe(i, G, Q, C, O_var, O_fix, T):
+        global p
         #aus Zinssatz und Lebensdauer den PVF "Present Value Factor" berechnen. Das Annuitätsfaktor "a" ist dann 1/PVF.
         pvf=(1/i)*(1-1/(1+i)**T)
         a=1/pvf
@@ -383,10 +384,10 @@ if show_analysis:
         p=(I_0*a+B)/Q+O_var
         
         return(I_0, B, pvf, a, p)
+        #return(p)
     
     #Abweichung für die Parameter 'C' Kapitalkosten 
-    abw=np.arange(0, 2.25, 0.05, dtype=float)
-    s_analysis=st.radio("Choose one parameter for the sensitivity analysis", ('WACC','Investment Costs','Fixed Operational Costs','Variable Operational Costs'))
+    abw=np.arange(0, 2.05, 0.05, dtype=float)
     i = st.number_input("Input Rate of Return/WACC", step=1e-6,format="%.4f")
     C = st.number_input('Insert the CAPEX €/kW') 
     O_var = st.number_input('Insert var. OPEX €/kWh', step=1e-6,format="%.3f")
@@ -394,60 +395,24 @@ if show_analysis:
     T = st.slider("Lifespan", 1, 30, 10)
     G = rated_power
     Q = sum_of_energy_yield
-    #show_time=st.checkbox("Sensitivity Analysis for Lifespan of the Project")
-    if s_analysis=='Investment Costs': 
-        lcoe_onshore  = lcoe(i, G, Q, C*abw, O_var, O_fix, T)    
-        column_names=['Deviation']
-        sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
-        sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
-        data = np.arange(-130, 130, 10)
-        sensitivity["Deviation in Percentage [%]"] = pd.DataFrame(data)
-        st.write(sensitivity)
-        df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
-        fig = plt.figure()
-        ax = df_masked.plot(x='Deviation in Perc' , grid=True, legend=False, style="o-")
-        ax.set_ylabel("LCOE [Euro/kWh]")
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-        st.pyplot(plt)
-    if s_analysis=='WACC':
-        lcoe_onshore  = lcoe(i*abw, G, Q, C, O_var, O_fix, T)    
-        column_names=['Deviation']
-        sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
-        sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
-        data = np.arange(-130, 130, 10)
-        sensitivity["Deviation in Percentage [%]"] = pd.DataFrame(data)
-        st.write(sensitivity)
-        df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
-        fig = plt.figure()
-        ax = df_masked.plot(x='Deviation in Perc' , grid=True, legend=False, style="o-")
-        ax.set_ylabel("LCOE [Euro/kWh]")
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-        st.pyplot(plt)
-    if s_analysis=='Fixed Operational Costs':
-        lcoe_onshore  = lcoe(i, G, Q, C, O_var, O_fix*abw, T)    
-        column_names=['Deviation']
-        sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
-        sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
-        data = np.arange(-130, 130, 10)
-        sensitivity["Deviation in Perc"] = pd.DataFrame(data)
-        st.write(sensitivity)
-        df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
-        fig = plt.figure()
-        ax = df_masked.plot(x='Deviation in Perc' , grid=True, legend=False, style="o-")
-        ax.set_ylabel("LCOE [Euro/kWh]")
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-        st.pyplot(plt)
-    if s_analysis=='Variable Operational Costs':
-        lcoe_onshore  = lcoe(i, G, Q, C, O_var*abw, O_fix, T)    
-        column_names=['Deviation']
-        sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
-        sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
-        data = np.arange(-130, 130, 10)
-        sensitivity["Deviation in Percentage [%]"] = pd.DataFrame(data)
-        st.write(sensitivity)
-        df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
-        fig = plt.figure()
-        ax = df_masked.plot(x='Deviation in Perc' , grid=True, legend=False, style="o-")
-        ax.set_ylabel("LCOE [Euro/kWh]")
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-        st.pyplot(plt)
+    lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
+    st.write("Levelized Cost of Electricity is: ", p,"€/kWh")
+    lcoe_capex = lcoe(i, G, Q, C*abw, O_var, O_fix, T)
+    lcoe_opfix = lcoe(i, G, Q, C, O_var, O_fix*abw, T)
+    lcoe_opvar= lcoe(i, G, Q, C, O_var*abw, O_fix, T)
+    lcoe_wacc = lcoe(i*abw, G, Q, C, O_var, O_fix, T)    
+    column_names=['Deviation']
+    sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
+    sensitivity['CAPEX'] = lcoe_capex[-1]
+    sensitivity['OPEX (fixed)'] = lcoe_opfix[-1]
+    sensitivity['OPEX (variable)'] = lcoe_opvar[-1]
+    sensitivity['WACC'] = lcoe_wacc[-1]
+    data = np.arange(-100, 105, 5)
+    sensitivity["Deviation of the Parameters in Percentage [%]"] = pd.DataFrame(data)
+    #st.write(sensitivity)       
+    df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
+    fig = plt.figure(figsize=(15,12))
+    ax = df_masked.plot(x='Deviation of the Parameters in Percentage [%]' , grid=True, legend=True, style="o-")
+    ax.set_ylabel("LCOE [Euro/kWh]")
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+    st.pyplot(plt)
