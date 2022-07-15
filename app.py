@@ -13,6 +13,7 @@ from mpl_toolkits.axes_grid.inset_locator import inset_axes
 import math
 import seaborn as sns
 from PIL import Image
+import matplotlib.ticker as mtick
 
 
 
@@ -58,6 +59,7 @@ with st.sidebar:
     st.subheader("Anlagenparameter")
     df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
     type = st.selectbox('Modell', (name for name in df["name"]))
+    #st.write(df)
     
     st.subheader("Wirtschaftlichkeit")
     show_analysis = st.checkbox("Show analysis")
@@ -161,14 +163,7 @@ if show_plot:
     ax.set_legend(loc = "best")
     plt.title(f"Wind rose diagram for Berlin")
     st.pyplot(plt)
-    
-    st.subheader("Windrose - Filled Mode")
-    plt.figure(figsize = (8, 6))
-    ax = WindroseAxes.from_ax()
-    ax.contourf(dataframe.Direction, dataframe.Speed, bins=np.arange(0, 8, 1), cmap=cm.hot)
-    ax.set_legend(loc = "best")
-    plt.title(f"Wind rose diagram for Berlin")
-    st.pyplot(plt)
+
     
     st.subheader("Wind Turbine")
     st.write("The power curve of a wind turbine is a graph that depicts how much electrical power output is produced by a wind turbine at different wind speeds. These curves are found by field measurements, where the wind speed reading from a device called an anemometer (which is placed on a mast at a reasonable distance to the wind turbine) is read and plotted against the electrical power output from the turbine.")
@@ -196,11 +191,13 @@ if show_plot:
         cut_in_speed = 3 
         cut_out_speed = 25
         rated_speed = 14
-        rated_power = 810
+        rated_power = 3000
     
     # Definition of Dataframe
     df = dataframe
     data = df.Speed.values
+    
+    
     params = stats.weibull_min.fit(data,
                              floc = 0,     #Fix the location at zero
                              scale = 2    #keeps the first scale parameter of the exponential weibull fixed at once
@@ -210,8 +207,6 @@ if show_plot:
     for index in df.index:
         df.loc[index, "Speed Class"] = math.ceil(df.loc[index, "Speed"])
     
-    #st.subheader("Wind Class in details")
-    #st.write(df)
     
     st.subheader("Frequency in Details")
     df_new = df.groupby(["Speed Class"]).count()
@@ -324,7 +319,7 @@ if show_plot:
     fig, ax = plt.subplots()
     ax.plot(stats.weibull_min.pdf(speed_range, *params),
             color = "blue",
-            label = "Wind speed distribution",
+            label = "Weibull-distribution",
         linewidth = 2)
 
     power_curve["Power production distribution"].plot(ax = ax,
@@ -388,29 +383,30 @@ if show_analysis:
         p=(I_0*a+B)/Q+O_var
         
         return(I_0, B, pvf, a, p)
+    
     #Abweichung für die Parameter 'C' Kapitalkosten 
-    abw=np.arange(0, 2, 0.05, dtype=float)
-    i = 0.042
+    abw=np.arange(0, 2.25, 0.05, dtype=float)
+    i_onshore = st.number_input("Input Zinssatz", step=1e-6,format="%.4f")
     G = rated_power
     Q = sum_of_energy_yield
-    C = 1700 * abw
-    O_var = st.slider("variable Betriebskosten in €/kWh", 1, 100, 35)
-    O_fix = st.slider("konstante Betriebskosten in €/kWh", 1, 100, 25)
+    C_onshore = st.number_input('Insert the CAPEX €/kW') * abw
+    O_var = 0.008
+    O_fix_onshore = st.number_input("Insert fix. OPEX in €/kW")
     T = st.slider("Zeitraum", 1, 30, 10)
-    #i=0.07
-    #G=1
-    #Q=1000
-    #C=1700*abw
-    #O_fix=20
-    #O_var=0.008
-    #T=20
-    lcoe  = lcoe(i, G, Q, C, O_var, O_fix, T)
+    lcoe_onshore  = lcoe(i_onshore, G, Q, C_onshore, O_var, O_fix_onshore, T)    
     column_names=['Abweichung']
     sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
-    sensitivity['LCOE [Euro/kWh]'] = lcoe[-1] 
-    fig = plt.figure()
-    ax = sensitivity.plot(x='Abweichung' , grid=True, style= "bo-", legend=False)
-    ax.set_ylabel("LCOE [Euro/kWh]")
-    st.pyplot(plt)
+    sensitivity['onshore [Euro/kWh]'] = lcoe_onshore[-1] 
+    data = np.arange(-130, 130, 10)
+    sensitivity["Perc"] = pd.DataFrame(data)
     st.write(sensitivity)
+    df_masked = sensitivity.loc[:, sensitivity.columns != 'Abweichung']
+    fig = plt.figure()
+    ax = df_masked.plot(x='Perc' , grid=True, legend=False, style="o-")
+    ax.set_ylabel("LCOE [Euro/kWh]")
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+    st.pyplot(plt)
+
+    
+
     
