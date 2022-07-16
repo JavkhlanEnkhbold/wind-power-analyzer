@@ -310,7 +310,51 @@ if show_plot:
     power_curve["Power production distribution"] = power_curve["Frequency (%)"] * power_curve["Power at given speed"]/100
     power_curve["Energy yield"] = power_curve["Power at given speed"] * power_curve["Hours"]
     st.write(power_curve)
-   
+    
+    #FLAUTENANALYSE:
+    st.subheader("Analysis of Calm Hours")
+       
+    fig, ax = plt.subplots()
+    ax = dataframe["Speed"].plot(color = "red", label="daily values")
+    w= dataframe["Speed"].to_numpy()
+    w=np.unique(w)
+    #st.write(np.sort(w)) 
+    count_calm=0
+    #list_dates=[]
+    for a in w:
+        if a < cut_in_speed:
+            #st.write(a)
+            #st.write(dataframe[dataframe["Speed"] == a].index)
+            dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
+            #st.write(dt)
+            #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
+            for b in dt:
+                calm=ax.axvline(x = b, linestyle = "solid", color = "green", alpha=0.5, linewidth=0.1)
+                count_calm=count_calm+1
+        else:
+            continue
+    plt.xlabel("Datetime")
+    plt.ylabel("Windspeed [m/s]")
+    plt.title("Distribution of Calm Hours over the Year")
+    calm.set_label("calm hours")
+    plt.legend(loc = "upper right")
+    st.pyplot(plt)
+    st.write("Number of calm hours for the measurement period: ", count_calm)
+    #calmdates_list = [x for xs in list_dates for x in xs]
+    #calm_dates= pd.DataFrame (calmdates_list, columns = ['Datetime'])
+    #st.write(calm_dates['Datetime'].sort_values(ascending=True))
+    #st.write(calm_dates.duplicated(keep='first'))
+    
+    st.subheader("Duration Curve")
+    
+    fig, ax = plt.subplots()
+    duration=dataframe["Speed"].sort_values(ascending=False).reset_index(drop=True).plot(color = "blue", linewidth=3,label="Duration Curve")
+    cut_in=ax.axhline(y = cut_in_speed, linestyle = "solid", color = "red", alpha=1, linewidth=3, label="Cut-in Wind Speed") 
+    plt.ylabel("Wind Speed (m/s)")
+    plt.xlabel("Hours of Load per Year")
+    plt.title("Wind Speed Duration Curve for the measurement period")
+    plt.legend(loc = "upper right")
+    st.pyplot(plt)
     
     rated_power = 3000
     capacity_factor = power_curve["Energy yield"].sum() / (8760 * rated_power)
@@ -348,16 +392,8 @@ if show_plot:
             bbox_to_anchor = (0.87, 0.05))
     st.pyplot(fig)
     
-    st.subheader("Summary")
     sum_of_energy_yield = power_curve["Energy yield"].sum()
     
-    st.write(f"The sum of the energy yield in 2021 was ", sum_of_energy_yield, "kWh" )
-    st.write(f"The rated power of the unit was", rated_power, "kW")
-    st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
-    st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
-
-    
-
 # Wirtschaftlichkeit
 if show_analysis:
     st.subheader("Economic Analysis")
@@ -396,7 +432,7 @@ if show_analysis:
     G = rated_power
     Q = sum_of_energy_yield
     lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
-    st.write("Levelized Cost of Electricity is: ", p,"€/kWh")
+    st.write("The Levelized Cost of Electricity is: ", p,"€/kWh")
     lcoe_capex = lcoe(i, G, Q, C*abw, O_var, O_fix, T)
     lcoe_opfix = lcoe(i, G, Q, C, O_var, O_fix*abw, T)
     lcoe_opvar= lcoe(i, G, Q, C, O_var*abw, O_fix, T)
@@ -416,3 +452,16 @@ if show_analysis:
     ax.set_ylabel("LCOE [Euro/kWh]")
     ax.xaxis.set_major_formatter(mtick.PercentFormatter())
     st.pyplot(plt)
+
+    
+    st.subheader("Summary")
+
+    
+    st.write(f"The sum of the energy yield in 2021 was ", sum_of_energy_yield, "kWh" )
+    st.write("Number of calm hours for 2021: ", count_calm)
+    st.write(f"The rated power of the unit was", rated_power, "kW")
+    st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
+    st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
+    lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
+    st.write("The Levelized Cost of Electricity for the given turbine and location is: ", p,"€/kWh")
+ 
