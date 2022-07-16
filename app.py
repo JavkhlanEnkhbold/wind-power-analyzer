@@ -457,6 +457,7 @@ if show_analysis:
         ax.set_ylabel("LCOE [Euro/kWh]")
         ax.xaxis.set_major_formatter(mtick.PercentFormatter())
         st.pyplot(plt)
+        lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
     except:
         st.write("Please enter parameters for the calculation")
 
@@ -469,6 +470,5 @@ if show_analysis:
     st.write(f"The rated power of the unit was", rated_power, "kW")
     st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
     st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
-    lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
     st.write("The Levelized Cost of Electricity for the given turbine and location is: ", p,"€/kWh")
  
