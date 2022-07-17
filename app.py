@@ -42,6 +42,7 @@ def read_units(file):
     return df
 
 with st.sidebar:
+    st.sidebar.image("logo-tuberlin-header.png", use_column_width=True)
     st.subheader("Upload raw data")
     uploaded_file = st.file_uploader("Choose a file")
     if uploaded_file is not None:
@@ -340,8 +341,12 @@ if show_plot:
     plt.legend(loc = "upper right")
     st.pyplot(plt)
     st.write("Number of calm hours for the measurement period: ", count_calm)
-    #calmdates_list = [x for xs in list_dates for x in xs]
+    #calmdates_list = [ab for abc in list_dates for ab in abc]
     #calm_dates= pd.DataFrame (calmdates_list, columns = ['Datetime'])
+    #st.write(calm_dates.loc['2021-01'])
+    #st.write(len(calm_dates.loc['2021-01']))
+    #month= {'Month': ['January','February','March','April','May','June','July','August','September','October','November','December']}
+    #calm_months=pd.DataFrame(data=month)
     #st.write(calm_dates['Datetime'].sort_values(ascending=True))
     #st.write(calm_dates.duplicated(keep='first'))
     
@@ -457,7 +462,6 @@ if show_analysis:
         ax.set_ylabel("LCOE [Euro/kWh]")
         ax.xaxis.set_major_formatter(mtick.PercentFormatter())
         st.pyplot(plt)
-        lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
     except:
         st.write("Please enter parameters for the calculation")
 
@@ -470,5 +474,9 @@ if show_analysis:
     st.write(f"The rated power of the unit was", rated_power, "kW")
     st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
     st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
-    st.write("The Levelized Cost of Electricity for the given turbine and location is: ", p,"€/kWh")
+    try:
+        lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
+        st.write("The Levelized Cost of Electricity for the given turbine and location is: ", p,"€/kWh")
+    except:
+        st.write(" For LCOE, please enter parameters ")
  
