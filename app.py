@@ -21,9 +21,9 @@ import matplotlib.ticker as mtick
 
 
 st.title('Windscore')
-st.subheader("**A tool for analyzing wind energy**")
-st.write("This is an app designed to analyze energy output from a Windprofil.")
-st.write("The core functions of this app should be : 1. Upload raw windspeed data, 2. Calculate the power output from this wind speed profil. 3. Calculate the power of a wind farm based on location information. 4. Calculation LCOE")
+st.subheader("**-A tool for analyzing wind energy**")
+st.write("This is an app designed to analyze energy output from a wind profil.")
+st.write("The core functions of this app should be : 1. Upload raw wind speed data as .csv format, 2. Calculate the power output from this wind speed profil. 3. Calculate the energy yield. 4. Calculation of LCOE and calm hours per year.")
 
 #@st.cache
 def load_data(file):
@@ -42,6 +42,7 @@ def read_units(file):
     return df
 
 with st.sidebar:
+    st.sidebar.image("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/logo.jpeg", use_column_width=True)
     st.subheader("Upload raw data")
     uploaded_file = st.file_uploader("Choose a file")
     if uploaded_file is not None:
@@ -53,15 +54,15 @@ with st.sidebar:
     st.subheader("Statistic")
     show_statistic = st.checkbox("Show Statistic")    
     
-    st.subheader("Plotts")
-    show_plot = st.checkbox("Show Plotts")  
+    st.subheader("Plots")
+    show_plot = st.checkbox("Show Plots")  
     
-    st.subheader("Anlagenparameter")
-    df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
+    st.subheader("Wind Turbine Parameters")
+    df = read_units("rawdata/supply__wind_turbine_library.csv")
     type = st.selectbox('Modell', (name for name in df["name"]))
     #st.write(df)
     
-    st.subheader("Wirtschaftlichkeit")
+    st.subheader("Economic Analysis")
     show_analysis = st.checkbox("Show analysis")
     
 if show_raw_data:
@@ -73,10 +74,11 @@ if show_statistic:
     st.write(dataframe.describe())
     
 if show_plot:
-    st.header("Plotts")
+    st.header("Plots")
 
     #Plott1. Time Series
     st.subheader("Time-Series")
+    st.write("A time series is a data set that tracks a sample over time. In this analysis, the wind speed and it's average are being plotted with the date time.")
     fig, ax = plt.subplots()
     dataframe["Speed"].plot(label="Daily", ylabel="Speed [m/s]")
     daily = dataframe["Speed"].resample('D').mean()
@@ -86,12 +88,14 @@ if show_plot:
     st.pyplot(fig)
     
     fig, ax = plt.subplots()
+    st.write("The monthly average is to illustrate the general trend of the wind speed over the year.")
     dataframe.resample("M")["Speed"].mean().plot(label="Monthly Mean")
     ax.legend()
     ax.grid(color="black")
     st.pyplot(fig)
     
     #Plott2: Seasonal Pattern
+    st.write("The deeper analysis into the seasonal value shows where the wind speed has the highest and lowest values.")
     fig, ax = plt.subplots(2,6, sharey = True, figsize = (20, 8))
     plt.rcParams["font.size"] = 12
     ax[0,0].plot(dataframe[dataframe.Month == 1]["Speed"],color="darkred")
@@ -151,6 +155,7 @@ if show_plot:
     
     #Plott3: Windrose
     st.subheader("Windrose")
+    st.write("A wind rose is a graphic tool used by meteorologists to give a succinct view of how wind speed and direction are typically distributed at a particular location.")
     plt.figure(figsize = (8, 6))
     ax = WindroseAxes.from_ax()
     ax.bar(dataframe.Direction,
@@ -172,7 +177,7 @@ if show_plot:
     #Plott4: Anlage
     if type:
         #st.subheader("Selected unit/modell: {}".format(str(type)) )
-        df = read_units("/Users/javkhlanenkhbold/Documents/wind-power-analyzer/rawdata/supply__wind_turbine_library.csv")
+        df = read_units("rawdata/supply__wind_turbine_library.csv")
         df['power_curve_wind_speeds'] = df['power_curve_wind_speeds']
         df['power_curve_values'] = df['power_curve_values']
         selected_unit = df.loc[df["name"] == type]
@@ -259,15 +264,14 @@ if show_plot:
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     lgd = fig.legend(lines, labels, ncol = 2, 
-            bbox_to_anchor = (0.87, 0.05))
-
+            bbox_to_anchor = (0.80, 0.02))
     plt.title("Theoretical and observed wind speed distribution in Berlin")
     st.pyplot(plt)
 
     #Plott6: Power Curve
     #Enercon E-82/3000    
     st.subheader("Power Curve")
-       
+    st.write("The power curve illustrates the relationship between power output and the wind speed. It also shows the cut-in and cut-out speed.")   
     fig, ax = plt.subplots()
     ax = power_curve["Power at given speed"].plot(color = "darkblue", linewidth = 4, label = "Power Curve")
     ax.vlines(x = cut_in_speed,
@@ -291,7 +295,7 @@ if show_plot:
     plt.xlabel("Speed (m/s)")
     plt.ylabel("Power at given speed (kW)")
     plt.title("Power curve diagram of given wind turbine")
-    plt.legend(loc = "upper left")
+    #plt.legend(loc = "upper left")
     st.pyplot(plt)
         
     cut_in_speed = 3 
@@ -302,15 +306,52 @@ if show_plot:
     new_row = {"Observed Frequency": [0, 0, 0, 0]}
     df_new = df_new.append(pd.DataFrame(new_row), ignore_index=True)
     
-    """Berechnung der Frequenz der Windklassen"""
-    
-    
+    """Calculation of the Frequency of Wind Classes"""
     power_curve["Hours"] = df_new.index.map(df_new["Observed Frequency"])
     power_curve["Frequency (%)"] = power_curve["Hours"]/power_curve["Hours"].sum()
     power_curve["Power production distribution"] = power_curve["Frequency (%)"] * power_curve["Power at given speed"]/100
     power_curve["Energy yield"] = power_curve["Power at given speed"] * power_curve["Hours"]
     st.write(power_curve)
-   
+    
+    #FLAUTENANALYSE:
+    st.subheader("Analysis of Calm Hours")
+    fig, ax = plt.subplots()
+    ax = dataframe["Speed"].plot(color = "red", label="daily values")
+    w= dataframe["Speed"].to_numpy()
+    w=np.unique(w)
+    #st.write(np.sort(w)) 
+    count_calm=0
+    #list_dates=[]
+    for a in w:
+        if a < cut_in_speed:
+            #st.write(a)
+            #st.write(dataframe[dataframe["Speed"] == a].index)
+            dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
+            #st.write(dt)
+            #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
+            for b in dt:
+                calm=ax.axvline(x = b, linestyle = "solid", color = "green", alpha=0.5, linewidth=0.1)
+                count_calm=count_calm+1
+        else:
+            continue
+    plt.xlabel("Datetime")
+    plt.ylabel("Windspeed [m/s]")
+    plt.title("Distribution of Calm Hours over the Year")
+    calm.set_label("calm hours")
+    plt.legend(loc = "upper right")
+    st.pyplot(plt)
+    st.write("Number of calm hours for the measurement period: ", count_calm)
+
+    st.subheader("Duration Curve")
+    
+    fig, ax = plt.subplots()
+    duration=dataframe["Speed"].sort_values(ascending=False).reset_index(drop=True).plot(color = "blue", linewidth=3,label="Duration Curve")
+    cut_in=ax.axhline(y = cut_in_speed, linestyle = "solid", color = "red", alpha=1, linewidth=3, label="Cut-in Wind Speed") 
+    plt.ylabel("Wind Speed (m/s)")
+    plt.xlabel("Hours of Load per Year")
+    plt.title("Wind Speed Duration Curve for the measurement period")
+    plt.legend(loc = "upper right")
+    st.pyplot(plt)
     
     rated_power = 3000
     capacity_factor = power_curve["Energy yield"].sum() / (8760 * rated_power)
@@ -348,14 +389,12 @@ if show_plot:
             bbox_to_anchor = (0.87, 0.05))
     st.pyplot(fig)
     
-    st.subheader("Summary")
     sum_of_energy_yield = power_curve["Energy yield"].sum()
     
-    st.write(f"The sum of the energy yield in 2021 was ", sum_of_energy_yield, "kWh" )
-    st.write(f"The rated power of the unit was", rated_power, "kW")
-    st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
-    st.write(f"The full load hour is ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
-
+    #st.write(f"The rated power of the unit was", rated_power, "kW")
+    #st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
+    #st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
+    
 # Wirtschaftlichkeit
 if show_analysis:
     st.subheader("Economic Analysis")
@@ -393,30 +432,42 @@ if show_analysis:
     T = st.slider("Lifespan", 1, 30, 10)
     G = rated_power
     Q = sum_of_energy_yield
-    lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
-    st.write("Levelized Cost of Electricity is: ", p,"€/kWh")
-    lcoe_capex = lcoe(i, G, Q, C*abw, O_var, O_fix, T)
-    lcoe_opfix = lcoe(i, G, Q, C, O_var, O_fix*abw, T)
-    lcoe_opvar= lcoe(i, G, Q, C, O_var*abw, O_fix, T)
-    lcoe_wacc = lcoe(i*abw, G, Q, C, O_var, O_fix, T)    
-    column_names=['Deviation']
-    sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
-    sensitivity['CAPEX'] = lcoe_capex[-1]
-    sensitivity['OPEX (fixed)'] = lcoe_opfix[-1]
-    sensitivity['OPEX (variable)'] = lcoe_opvar[-1]
-    sensitivity['WACC'] = lcoe_wacc[-1]
-    data = np.arange(-100, 105, 5)
-    sensitivity["Deviation of the Parameters in Percentage [%]"] = pd.DataFrame(data)
-    #st.write(sensitivity)       
-    df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
-    fig = plt.figure(figsize=(15,12))
-    ax = df_masked.plot(x='Deviation of the Parameters in Percentage [%]' , grid=True, legend=True, style="o-")
-    ax.set_ylabel("LCOE [Euro/kWh]")
-    ax.xaxis.set_major_formatter(mtick.PercentFormatter())
-    st.pyplot(plt)
-
-
+    try:
+        lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
+        st.write("The Levelized Cost of Electricity is: ", p,"€/kWh")
+        lcoe_capex = lcoe(i, G, Q, C*abw, O_var, O_fix, T)
+        lcoe_opfix = lcoe(i, G, Q, C, O_var, O_fix*abw, T)
+        lcoe_opvar= lcoe(i, G, Q, C, O_var*abw, O_fix, T)
+        lcoe_wacc = lcoe(i*abw, G, Q, C, O_var, O_fix, T)    
+        column_names=['Deviation']
+        sensitivity=pd.DataFrame(abw,index=None, columns=column_names)
+        sensitivity['CAPEX'] = lcoe_capex[-1]
+        sensitivity['OPEX (fixed)'] = lcoe_opfix[-1]
+        sensitivity['OPEX (variable)'] = lcoe_opvar[-1]
+        sensitivity['WACC'] = lcoe_wacc[-1]
+        data = np.arange(-100, 105, 5)
+        sensitivity["Deviation of the Parameters in Percentage [%]"] = pd.DataFrame(data)
+        #st.write(sensitivity)       
+        df_masked = sensitivity.loc[:, sensitivity.columns != 'Deviation']
+        fig = plt.figure(figsize=(15,12))
+        ax = df_masked.plot(x='Deviation of the Parameters in Percentage [%]' , grid=True, legend=True, style="o-")
+        ax.set_ylabel("LCOE [Euro/kWh]")
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter())
+        st.pyplot(plt)
+    except:
+        st.write("Please enter parameters for the calculation")
 
     
-
+    st.subheader("Summary")
     
+    st.write(f"The sum of the energy yield in 2021 was ", sum_of_energy_yield, "kWh" )
+    st.write(f"Number of calm hours for 2021: ", count_calm, "h")
+    st.write(f"The rated power of the unit was", rated_power, "kW")
+    st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
+    st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
+    try:
+        lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
+        st.write("The Levelized Cost of Electricity for the given turbine and location is: ", round(p,2),"€/kWh")
+    except:
+        st.write(" For LCOE, please enter parameters ")
+ 
