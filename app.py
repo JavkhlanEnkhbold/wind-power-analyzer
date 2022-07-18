@@ -16,10 +16,6 @@ from PIL import Image
 import matplotlib.ticker as mtick
 
 
-
-
-
-
 st.title('Windscore')
 st.subheader("**-A tool for analyzing wind energy**")
 st.write("This is an app designed to analyze energy output from a wind profil.")
@@ -80,16 +76,16 @@ if show_plot:
     st.subheader("Time-Series")
     st.write("A time series is a data set that tracks a sample over time. In this analysis, the wind speed and it's average are being plotted with the date time.")
     fig, ax = plt.subplots()
-    dataframe["Speed"].plot(label="Daily", ylabel="Speed [m/s]")
+    dataframe["Speed"].plot(label="Daily", ylabel="Speed [m/s]", color="cornflowerblue")
     daily = dataframe["Speed"].resample('D').mean()
-    daily.plot(color="#BB0000", label="Daily Mean")
+    daily.plot(color="black", label="Daily Mean")
     ax.legend()
     ax.grid(color="black")
     st.pyplot(fig)
     
     fig, ax = plt.subplots()
     st.write("The monthly average is to illustrate the general trend of the wind speed over the year.")
-    dataframe.resample("M")["Speed"].mean().plot(label="Monthly Mean")
+    dataframe.resample("M")["Speed"].mean().plot(label="Monthly Mean", color="royalblue", style=".-")
     ax.legend()
     ax.grid(color="black")
     st.pyplot(fig)
@@ -212,10 +208,8 @@ if show_plot:
     for index in df.index:
         df.loc[index, "Speed Class"] = math.ceil(df.loc[index, "Speed"])
     
-    
     st.subheader("Frequency in Details")
     df_new = df.groupby(["Speed Class"]).count()
-    
     
     df_new = df_new[["Speed"]]
     df_new.columns = ["Observed Frequency"]
@@ -244,23 +238,7 @@ if show_plot:
             label = "Wind speed histogram"
             )
     ax.set_ylabel("Frequency (Number of hours)", color = "navy")
-    ax2 = ax.twinx()
-    ax2.plot(df_new["Cumulative Frequency"],
-            color = "red",
-            label = "Observed Cumulative frequency",
-            linewidth = 3)
-
-    ax2.set_ylabel("Cumulative frequency (number of hours)",
-                color = "red",
-                )
-
-    ax2.plot(stats.weibull_min.cdf(speed_range, *params)*len(df),
-            color = "pink",
-            label = "Theoretical Cumulative density",
-            linewidth = 3)
-
     ax.set_xlabel("Speed Class (m/s)")
-
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     lgd = fig.legend(lines, labels, ncol = 2, 
@@ -280,18 +258,47 @@ if show_plot:
                 linestyle = "dashed",
                 color = "black"
                 )
+    ax.annotate("Cut in speed",
+            xy=(cut_in_speed, 0), xycoords='data',
+            xytext=(cut_in_speed, 200), textcoords='data',
+            ha = "center",
+            arrowprops=dict(arrowstyle="->",
+                            connectionstyle="arc3"),
+           )
+
     ax.vlines(x = cut_out_speed,
                 ymin = 0,
                 ymax = power_curve.loc[cut_out_speed, "Power at given speed"],
                 color = "darkblue",
                 linewidth = 4
                 )
+    ax.vlines(x = rated_speed,
+          ymin = 0,
+          ymax = power_curve.loc[rated_speed, "Power at given speed"],
+          linestyle = "dashed",
+          color = "black"
+          )
+
+    ax.annotate("Rated power & speed",
+            xy=(rated_speed, rated_power), xycoords='data',
+            xytext=(rated_speed - 10, rated_power), textcoords='data',
+            ha = "left"
+            )
+    
     ax.hlines(y = 0,
                 xmin = cut_out_speed,
                 xmax = 30,
                 color = "darkblue",
                 linewidth = 4
                 )
+    
+    ax.annotate("Cut out speed",
+            xy=(cut_out_speed, rated_power), xycoords='data',
+            xytext=(cut_out_speed, 900), textcoords='data',
+            ha = "right",
+            arrowprops=dict(arrowstyle="->",
+                            connectionstyle="arc3")
+            )
     plt.xlabel("Speed (m/s)")
     plt.ylabel("Power at given speed (kW)")
     plt.title("Power curve diagram of given wind turbine")
@@ -313,46 +320,7 @@ if show_plot:
     power_curve["Energy yield"] = power_curve["Power at given speed"] * power_curve["Hours"]
     st.write(power_curve)
     
-    #FLAUTENANALYSE:
-    st.subheader("Analysis of Calm Hours")
-    fig, ax = plt.subplots()
-    ax = dataframe["Speed"].plot(color = "red", label="daily values")
-    w= dataframe["Speed"].to_numpy()
-    w=np.unique(w)
-    #st.write(np.sort(w)) 
-    count_calm=0
-    #list_dates=[]
-    for a in w:
-        if a < cut_in_speed:
-            #st.write(a)
-            #st.write(dataframe[dataframe["Speed"] == a].index)
-            dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
-            #st.write(dt)
-            #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
-            for b in dt:
-                calm=ax.axvline(x = b, linestyle = "solid", color = "green", alpha=0.5, linewidth=0.1)
-                count_calm=count_calm+1
-        else:
-            continue
-    plt.xlabel("Datetime")
-    plt.ylabel("Windspeed [m/s]")
-    plt.title("Distribution of Calm Hours over the Year")
-    calm.set_label("calm hours")
-    plt.legend(loc = "upper right")
-    st.pyplot(plt)
-    st.write("Number of calm hours for the measurement period: ", count_calm)
 
-    st.subheader("Duration Curve")
-    
-    fig, ax = plt.subplots()
-    duration=dataframe["Speed"].sort_values(ascending=False).reset_index(drop=True).plot(color = "blue", linewidth=3,label="Duration Curve")
-    cut_in=ax.axhline(y = cut_in_speed, linestyle = "solid", color = "red", alpha=1, linewidth=3, label="Cut-in Wind Speed") 
-    plt.ylabel("Wind Speed (m/s)")
-    plt.xlabel("Hours of Load per Year")
-    plt.title("Wind Speed Duration Curve for the measurement period")
-    plt.legend(loc = "upper right")
-    st.pyplot(plt)
-    
     rated_power = 3000
     capacity_factor = power_curve["Energy yield"].sum() / (8760 * rated_power)
     capacity_factor = round(capacity_factor, 2)
@@ -386,7 +354,7 @@ if show_plot:
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     fig.legend(lines, labels, ncol = 2, 
-            bbox_to_anchor = (0.87, 0.05))
+            bbox_to_anchor = (0.90, 0.01))
     st.pyplot(fig)
     
     sum_of_energy_yield = power_curve["Energy yield"].sum()
@@ -395,6 +363,44 @@ if show_plot:
     #st.write(f"The capacity factor of the given wind turbine at Berlin in 2021 was ", capacity_factor*100, "%.")
     #st.write(f"The full load hours are ", round(power_curve["Energy yield"].sum()/rated_power, 2), "h")
     
+    #FLAUTENANALYSE:
+    st.subheader("Analysis of Calm Hours")
+    fig, ax = plt.subplots()
+    ax = dataframe["Speed"].plot(color = "blue", label="daily values")
+    w= dataframe["Speed"].to_numpy()
+    w=np.unique(w)
+    #st.write(np.sort(w)) 
+    count_calm=0
+    #list_dates=[]
+    for a in w:
+        if a < cut_in_speed:
+            #st.write(a)
+            #st.write(dataframe[dataframe["Speed"] == a].index)
+            dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
+            #st.write(dt)
+            #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
+            for b in dt:
+                calm=ax.axvline(x = b, linestyle = "solid", color = "black", alpha=0.5, linewidth=0.1)
+                count_calm=count_calm+1
+        elif a > cut_out_speed:
+                    #st.write(a)
+                    #st.write(dataframe[dataframe["Speed"] == a].index)
+                    dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
+                    #st.write(dt)
+                    #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
+                    for b in dt:
+                        calm=ax.axvline(x = b, linestyle = "solid", color = "green", alpha=0.5, linewidth=0.1)
+                        count_calm=count_calm+1
+            
+    plt.xlabel("Datetime")
+    plt.ylabel("Windspeed [m/s]")
+    plt.title("Distribution of Calm Hours over the Year")
+    calm.set_label("calm hours")
+    plt.legend(loc = "upper right")
+    st.pyplot(plt)
+    st.write(f"Number of calm hours for the measurement period: ", count_calm, "h")
+    
+
 # Wirtschaftlichkeit
 if show_analysis:
     st.subheader("Economic Analysis")
@@ -425,16 +431,16 @@ if show_analysis:
     
     #Abweichung für die Parameter 'C' Kapitalkosten 
     abw=np.arange(0, 2.05, 0.05, dtype=float)
-    i = st.number_input("Input Rate of Return/WACC", step=1e-6,format="%.4f")
-    C = st.number_input('Insert the CAPEX €/kW') 
-    O_var = st.number_input('Insert var. OPEX €/kWh', step=1e-6,format="%.3f")
-    O_fix = st.number_input("Insert fix. OPEX in €/kW")
+    i = st.number_input("Input Rate of Return/WACC", step=1e-6,format="%.4f", value=0.0296)
+    C = st.number_input('Insert the CAPEX €/kW', value = 1400) 
+    O_var = st.number_input('Insert var. OPEX €/kWh', step=1e-6,format="%.3f", value=0.008)
+    O_fix = st.number_input("Insert fix. OPEX in €/kW", value=20)
     T = st.slider("Lifespan", 1, 30, 10)
     G = rated_power
     Q = sum_of_energy_yield
     try:
         lcoe_original=lcoe(i, G, Q, C, O_var, O_fix, T)
-        st.write("The Levelized Cost of Electricity is: ", p,"€/kWh")
+        #st.write("The Levelized Cost of Electricity is: ", p,"€/kWh")
         lcoe_capex = lcoe(i, G, Q, C*abw, O_var, O_fix, T)
         lcoe_opfix = lcoe(i, G, Q, C, O_var, O_fix*abw, T)
         lcoe_opvar= lcoe(i, G, Q, C, O_var*abw, O_fix, T)
