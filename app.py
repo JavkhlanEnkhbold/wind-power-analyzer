@@ -63,6 +63,7 @@ with st.sidebar:
     
 if show_raw_data:
     st.subheader("Raw Data")
+    st.write("The wind data source derives from the NASA Power Data Acess Viewer - https://power.larc.nasa.gov/data-access-viewer/")
     st.dataframe(data = dataframe)
 
 if show_statistic:
@@ -249,7 +250,8 @@ if show_plot:
     #Plott6: Power Curve
     #Enercon E-82/3000    
     st.subheader("Power Curve")
-    st.write("The power curve illustrates the relationship between power output and the wind speed. It also shows the cut-in and cut-out speed.")   
+    st.write("The power curve illustrates the relationship between power output and the wind speed. It also shows the cut-in and cut-out speed.") 
+    st.write("The wind turbine database: https://openenergy-platform.org/dataedit/view/supply/wind_turbine_library")  
     fig, ax = plt.subplots()
     ax = power_curve["Power at given speed"].plot(color = "darkblue", linewidth = 4, label = "Power Curve")
     ax.vlines(x = cut_in_speed,
@@ -383,14 +385,16 @@ if show_plot:
                 calm=ax.axvline(x = b, linestyle = "solid", color = "black", alpha=0.5, linewidth=0.1)
                 count_calm=count_calm+1
         elif a > cut_out_speed:
-                    #st.write(a)
-                    #st.write(dataframe[dataframe["Speed"] == a].index)
-                    dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
-                    #st.write(dt)
-                    #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
-                    for b in dt:
-                        calm=ax.axvline(x = b, linestyle = "solid", color = "green", alpha=0.5, linewidth=0.1)
-                        count_calm=count_calm+1
+            #st.write(a)
+            #st.write(dataframe[dataframe["Speed"] == a].index)
+            dt=dataframe[dataframe["Speed"] == a].index.to_numpy()
+            #st.write(dt)
+            #list_dates.append(dataframe[dataframe["Speed"] == a].index.strftime("%Y-%m-%d %H:%M:%S").tolist())
+            for b in dt:
+                calm=ax.axvline(x = b, linestyle = "solid", color = "green", alpha=0.5, linewidth=0.1)
+                count_calm=count_calm+1
+        else:
+            continue
             
     plt.xlabel("Datetime")
     plt.ylabel("Windspeed [m/s]")
@@ -465,7 +469,6 @@ if show_analysis:
 
     
     st.subheader("Summary")
-    
     st.write(f"The sum of the energy yield in 2021 was ", sum_of_energy_yield, "kWh" )
     st.write(f"Number of calm hours for 2021: ", count_calm, "h")
     st.write(f"The rated power of the unit was", rated_power, "kW")
