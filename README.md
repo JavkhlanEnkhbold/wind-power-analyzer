@@ -7,9 +7,11 @@ and database used for the wind energy unit is https://openenergy-platform.org/da
 
 In order to use this:
 
-git pull this Repo
+* Install streamlit 
 
-run: streamlit run app.py
+* git pull this Repo
+
+* run on Terminal: streamlit run app.py
 
 ## Results
 After importing time series of wind direction and speed data, it creates these plotts.
