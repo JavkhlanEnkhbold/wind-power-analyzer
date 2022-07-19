@@ -7,6 +7,8 @@ and database used for the wind energy unit is https://openenergy-platform.org/da
 
 In order to use this:
 
+* For the input file, please use the NASA data access viewer to download the data as .csv format.
+
 * Install streamlit 
 
 * git pull this Repo
